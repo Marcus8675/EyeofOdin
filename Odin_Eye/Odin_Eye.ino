@@ -22,13 +22,12 @@
 //
 // System level commands:
 //
-// FLASH #flashes
-// FLASHLED LED# #flashes
+// FLASH ##            #flashes
+// FLASHLED # ##       LED# #flashes
 // BRIGHTNESS 0-255
-// SETLED LED# R G B W
+// SETLED # ### ### ### ###           LED# R G B W
 // SETEYE R G B W
-// CLEARLED LED#
-// CLEAREYE
+
 
 #include <Adafruit_NeoPixel.h>
 #include <ArduinoOTA.h>
@@ -49,6 +48,7 @@ const char* hostname = "ODIN_EYE";
 String message;
 const byte numChars = 32;
 char receivedChars[numChars];
+uint32_t eyestatus[7] = {0, 0, 0, 0, 0, 0, 0};  //Holds status of each eye LED.  32bit representing RGBW values
 
 boolean newData = false;
  
@@ -129,13 +129,10 @@ void setup()
   Serial.println(WiFi.localIP());
 
   eye.begin(); //Start NeoPixel class
-  eye.setBrightness(8);
+  eye.setBrightness(32);
 
   //Set all pixels to off (black)
-  for(uint16_t i=0; i<eye.numPixels(); i++) 
-  {
-    eye.setPixelColor(i, eye.Color(0, 0, 0, 255));
-  }
+  seteye();
   eye.show(); // Initialize all pixels to 'off'
 
 }
@@ -159,14 +156,13 @@ void loop()
         //FLASHLED # ##   LED#  NumerofFlashes
         int numflash =message.substring(11,13).toInt();
         int led = message.substring(9,10).toInt();
-        int color = eye.getPixelColor(led); //get current color
 
         for(uint16_t i=0; (i<numflash); i++)
         {
-          eye.setPixelColor(led,0); //LED OFF
+          eye.setPixelColor(led, 0); //set all eye LED's to off
           eye.show();
           delay(500);
-          eye.setPixelColor(led,color);
+          seteye(); //return all eye LED to current settings
           eye.show();
           delay(500);
         } 
@@ -175,71 +171,54 @@ void loop()
       {
         //FLASH ##  NumerofFlashes
         int numflash =message.substring(6,8).toInt();
-        int brightness = eye.getBrightness(); //get current brightness
-        Serial.printf("numflash:%d  brightness:%d", numflash, brightness);
+        
         for(uint16_t i=0; i<numflash; i++)
         {
-          eye.setBrightness(0); //eye OFF
+          for(uint16_t x=0; x<7; x++)
+          {
+            eye.setPixelColor(x, 0); //set all eye LED's to off
+          }
           eye.show();
           delay(500);
-          Serial.print(".");
-          eye.setBrightness(brightness);
+          seteye();  //return all eye LED to current settings
           eye.show();
           delay(500);
         } 
       }
       
     }
-    // if (String(receivedChars) == "RAINBOW") {
-    //   rainbow(10);}
-    // else if (String(receivedChars) == "RAINBOWCYCLE") {
-    //   rainbowCycle(10);}
-    // else if (String(receivedChars) == "LED1") {
-    //   eye.setPixelColor(0, eye.Color(0, 0, 0, 255));} // White RGBW
-    // else if (String(receivedChars) == "LED2") {
-    //   eye.setPixelColor(1, eye.Color(0, 0, 0, 255));} // White RGBW
-    // else if (String(receivedChars) == "LED3") {
-    //   eye.setPixelColor(2, eye.Color(0, 0, 0, 255));} // White RGBW
-    // else if (String(receivedChars) == "LED4") {
-    //   eye.setPixelColor(3, eye.Color(0, 0, 0, 255));} // White RGBW
-    // else if (String(receivedChars) == "LED5") {
-    //   eye.setPixelColor(4, eye.Color(0, 0, 0, 255));} // White RGBW
-    // else if (String(receivedChars) == "LED6") {
-    //   eye.setPixelColor(5, eye.Color(0, 0, 0, 255));} // White RGBW
-    // else if (String(receivedChars) == "LED7") {
-    //   eye.setPixelColor(6, eye.Color(0, 0, 0, 255));} // White RGBW                        
-    // else if (String(receivedChars) == "OFF")
-    // {
-    //   for(uint16_t i=0; i<eye.numPixels(); i++) 
-    //   {
-    //     eye.setPixelColor(i, eye.Color(0, 0, 0, 0));
-    //   }
-    // }
-    // else {
-    //   colorWipe(eye.Color(0, 255, 0, 0), 50);} // Red
+
+    // SETLED # ### ### ### ###      LED# R G B W
+    if (message.substring(0,6) == "SETLED") //Search for token SETLED
+    {
+      int LED = message.substring(7,8).toInt();
+      int red = message.substring(9,12).toInt();
+      int green = message.substring(13,16).toInt();
+      int blue = message.substring(17,20).toInt();
+      int white = message.substring(21,24).toInt();
+      Serial.printf("LED:%d R:%d G:%d B:%d W:%d", LED, red, green, blue, white);
+      eyestatus[LED]=eye.Color(green, red, blue, white);  //Green and Red order are swapped in this NeoPixel Jewel
+      seteye();
+    }
+
+    //SETEYE ### ### ### ###     R G B W
+    if (message.substring(0,6) == "SETEYE") //Search for token SETEYE
+    {
+      int red = message.substring(7,10).toInt();
+      int green = message.substring(11,14).toInt();
+      int blue = message.substring(15,18).toInt();
+      int white = message.substring(19,22).toInt();
+      Serial.printf("R:%d G:%d B:%d W:%d", red, green, blue, white);
+      for(uint16_t x=0; x<7; x++)
+        {
+          eyestatus[x]=eye.Color(green, red, blue, white);  //Green and Red order are swapped in this NeoPixel Jewel
+        }
+      seteye();
+    }
+
   }  
   newData = false;
   eye.show();
-  
-  // if (msg="LED2") eye.setPixelColor(1, eye.Color(0, 0, 0, 255)); // White RGBW
-  // if (msg="LED3") eye.setPixelColor(2, eye.Color(0, 0, 0, 255)); // White RGBW
-  // if (msg="LED4") eye.setPixelColor(3, eye.Color(0, 0, 0, 255)); // White RGBW
-  // if (msg="LED5") eye.setPixelColor(4, eye.Color(0, 0, 0, 255)); // White RGBW
-  // if (msg="LED7") eye.setPixelColor(5, eye.Color(0, 0, 0, 255)); // White RGBW
-  // if (msg="LED7") eye.setPixelColor(6, eye.Color(0, 0, 0, 255)); // White RGBW
-
-  
-  // // Some example procedures showing how to display to the pixels:
-  // colorWipe(eye.Color(255, 0, 0), 50); // Red
-  // colorWipe(eye.Color(0, 255, 0), 50); // Green
-  // colorWipe(eye.Color(0, 0, 255), 50); // Blue
-  // colorWipe(eye.Color(0, 0, 0, 255), 50); // White RGBW
-  // // Send a theater pixel chase in...
-  // theaterChase(eye.Color(127, 127, 127), 50); // White
-  // theaterChase(eye.Color(127, 0, 0), 50); // Red
-  // theaterChase(eye.Color(0, 0, 127), 50); // Blue
-  
-  // theaterChaseRainbow(50);
 
 }
 
@@ -273,6 +252,14 @@ void recvWithStartEndMarkers() {
             recvInProgress = true;
         }
     }
+}
+
+void seteye()
+{
+  for(uint16_t i=0; i<7; i++)
+  {
+    eye.setPixelColor(i, eyestatus[i]);
+  }
 }
 
 // Fill the dots one after the other with a color
