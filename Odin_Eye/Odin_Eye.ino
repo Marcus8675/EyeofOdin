@@ -26,7 +26,7 @@
 // FLASHLED # ##       LED# #flashes
 // BRIGHTNESS 0-255
 // SETLED # ### ### ### ###           LED# R G B W
-// SETEYE R G B W
+// SETEYE ### ### ### ###             R G B W
 
 
 #include <Adafruit_NeoPixel.h>
@@ -36,8 +36,8 @@
 #include <WiFiUdp.h>
 
 #ifndef STASSID
-#define STASSID "MOTOROLA-81787"
-#define STAPSK "marcus8675"
+#define STASSID "Robot-Net"
+#define STAPSK "welcomeuser"
 #endif
 
 #define PIN 2
@@ -70,7 +70,7 @@ Adafruit_NeoPixel eye = Adafruit_NeoPixel(7, PIN, NEO_RGBW + NEO_KHZ800);
 void setup() 
 {
   Serial.begin(115200);                         // Start serial communication 
-  Serial.println("Opening the Eye");
+  //Serial.println("Opening the Eye");
   ArduinoOTA.setHostname(hostname);
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
@@ -143,14 +143,14 @@ void loop()
   recvWithStartEndMarkers();
   if (newData == true) 
   {
-    Serial.print("Data Received:");
-    Serial.println(receivedChars);
+    //Serial.print("Data Received:");
+    //Serial.println(receivedChars);
     message=String(receivedChars);
     message.toUpperCase();
     //receivedChars=String(receivedChars).toUpperCase();
     if (message.substring(0,5) == "FLASH") //Search for token FLASH
     {
-      Serial.println("FLASH");
+      //Serial.println("FLASH");
       if (message.substring(0,8) == "FLASHLED") //Specific LED?
       {
         //FLASHLED # ##   LED#  NumerofFlashes
@@ -196,7 +196,7 @@ void loop()
       int green = message.substring(13,16).toInt();
       int blue = message.substring(17,20).toInt();
       int white = message.substring(21,24).toInt();
-      Serial.printf("LED:%d R:%d G:%d B:%d W:%d", LED, red, green, blue, white);
+      //Serial.printf("LED:%d R:%d G:%d B:%d W:%d", LED, red, green, blue, white);
       eyestatus[LED]=eye.Color(green, red, blue, white);  //Green and Red order are swapped in this NeoPixel Jewel
       seteye();
     }
@@ -208,7 +208,7 @@ void loop()
       int green = message.substring(11,14).toInt();
       int blue = message.substring(15,18).toInt();
       int white = message.substring(19,22).toInt();
-      Serial.printf("R:%d G:%d B:%d W:%d", red, green, blue, white);
+      //Serial.printf("R:%d G:%d B:%d W:%d", red, green, blue, white);
       for(uint16_t x=0; x<7; x++)
         {
           eyestatus[x]=eye.Color(green, red, blue, white);  //Green and Red order are swapped in this NeoPixel Jewel
